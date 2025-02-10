@@ -138,4 +138,7 @@ public class ConfigManager {
         config.set("users." + userId + ".character", character);
         plugin.saveConfig();
     }
+    public String getWakeUpWord() {
+        return config.getString("wake_up_word", "chatgpt");
+    }
 }

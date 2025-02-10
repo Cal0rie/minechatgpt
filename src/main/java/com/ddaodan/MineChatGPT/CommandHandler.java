@@ -1,8 +1,10 @@
 package com.ddaodan.MineChatGPT;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -139,6 +141,9 @@ public class CommandHandler implements CommandExecutor {
     }
 
     private void askChatGPT(CommandSender sender, String question, ConversationContext conversationContext, boolean contextEnabled, String userId) {
+        askChatGPT(sender, question, conversationContext, contextEnabled, userId, false);
+    }
+    private void askChatGPT(CommandSender sender, String question, ConversationContext conversationContext, boolean contextEnabled, String userId, Boolean isPublicChat) {
         String utf8Question = convertToUTF8(question);
         JSONObject json = new JSONObject();
         json.put("model", configManager.getDefaultModel());
@@ -191,7 +196,12 @@ public class CommandHandler implements CommandExecutor {
                         String utf8ResponseBody = new String(responseBody.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
                         JSONObject jsonResponse = new JSONObject(utf8ResponseBody);
                         String answer = jsonResponse.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
-                        sender.sendMessage(configManager.getChatGPTResponseMessage().replaceFirst("%s", currentCharacter).replaceFirst("%s", answer));
+                        String answerStr = configManager.getChatGPTResponseMessage().replaceFirst("%s", currentCharacter).replaceFirst("%s", answer);
+                        if (isPublicChat) {
+                            Bukkit.broadcastMessage(answerStr);
+                        } else {
+                            sender.sendMessage(answerStr);
+                        }
                         if (contextEnabled) {
                             conversationContext.addMessage(answer); // 仅在启用上下文时添加AI响应到历史记录
                         }
@@ -218,6 +228,26 @@ public class CommandHandler implements CommandExecutor {
             return input; // 如果转换失败，返回原始输入
         }
     }
+
+    public void handleChat(Player sender,String msg) {
+        String userId = sender.getName();
+        if (!userContexts.containsKey(userId)) {
+            userContexts.put(userId, new ConversationContext(configManager.getMaxHistorySize()));
+            userContextEnabled.put(userId, configManager.isContextEnabled());
+        }
+
+        ConversationContext conversationContext = userContexts.get(userId);
+        if (!sender.hasPermission("minechatgpt.use")) {
+            sender.sendMessage(configManager.getNoPermissionMessage().replace("%s", "minechatgpt.use"));
+            return;
+        }
+        int firstSpaceIndex = msg.indexOf(' ');
+        String question = firstSpaceIndex != -1 ? msg.substring(firstSpaceIndex + 1).trim() : "";
+        sender.sendMessage(configManager.getQuestionMessage().replace("%s", question));
+        askChatGPT(sender, question, conversationContext, false, userId, true);
+        return;
+    }
+
     private void sendHelpMessage(CommandSender sender) {
         sender.sendMessage(configManager.getHelpMessage());
         sender.sendMessage(configManager.getHelpAskMessage());

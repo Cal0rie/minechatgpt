@@ -61,5 +61,7 @@ messages:
   invalid_model: "&cInvalid model. Use /chatgpt modellist to see available models."
   available_models: "&eAvailable models:"
   no_permission: "&cYou do not have permission to use this command. Required permission: %s"
+# Wake The Bot Up In The Chat Channel
+wake_up_word: "chatgpt"
 # If you don't know what this is, don't change it
 debug: false
